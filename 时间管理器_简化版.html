@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>时间管理器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            neutral: '#F3F4F6',
+            dark: '#1F2937'
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .timer-ring {
+        stroke-dasharray: 283;
+        stroke-dashoffset: 0;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+        transition: stroke-dashoffset 1s linear;
+      }
+      .bg-blur {
+        backdrop-filter: blur(8px);
+      }
+      .animate-float {
+        animation: float 3s ease-in-out infinite;
+      }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+  </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-green-50 to-blue-50 min-h-screen overflow-x-hidden touch-manipulation">
+  <!-- 背景图片 -->
+  <div class="fixed inset-0 z-0">
+    <img src="background.png" alt="自然背景" class="w-full h-full object-cover opacity-30">
+  </div>
+
+  <div class="relative z-10 w-full px-3 py-3 flex flex-col sm:flex-row items-start justify-center gap-4">
+  <!-- 左侧：计时器和当前任务 -->
+    <div class="flex flex-col items-center">
+      <!-- 环形计时器 -->
+      <div class="relative w-40 h-40 sm:w-48 sm:h-48" style="max-width: 55vw; max-height: 55vw;">
+        <!-- 灰色背景圆环 -->
+        <svg class="w-full h-full" viewBox="0 0 100 100">
+          <!-- 灰色背景圆环 -->
+          <circle cx="50" cy="50" r="45" fill="none" stroke="#E5E7EB" stroke-width="10" />
+          <!-- 蓝色进度圆环 -->
+          <circle id="progress-ring" cx="50" cy="50" r="45" fill="none" stroke="#3B82F6" stroke-width="10" stroke-linecap="round" opacity="1" />
+        </svg>
+        
+        <!-- 时间显示 -->
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span id="time-display" class="text-3xl sm:text-4xl font-bold text-dark">25:00</span>
+          <span id="current-task" class="text-base sm:text-lg font-medium text-primary mt-1">洗澡</span>
+        </div>
+      </div>
+      
+      <!-- 控制按钮 -->
+      <div class="flex justify-center gap-4 mt-4">
+        <button id="start-button" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-full flex items-center gap-1.5 transition-all duration-300 text-sm shadow-md hover:shadow-primary/30 hover:scale-105">
+          <i class="fa fa-play"></i> 开始
+        </button>
+        <button id="reset-button" class="bg-neutral hover:bg-neutral/80 text-dark px-4 py-2 rounded-full flex items-center gap-1.5 transition-all duration-300 text-sm shadow-sm hover:shadow-gray-200 hover:scale-105">
+          <i class="fa fa-refresh"></i> 重置
+        </button>
+      </div>
+      
+    </div>
+    
+    <!-- 中间：时间选择按钮 -->
+    <div class="w-full sm:w-auto bg-white/80 bg-blur rounded-xl shadow-lg p-3 h-full min-h-[200px] flex flex-col">
+      <div class="grid grid-cols-2 gap-1.5 flex-grow">
+        <button class="time-btn bg-primary/10 text-primary py-2 px-3 text-xs sm:text-sm rounded-lg border border-primary/20 transition-all hover:bg-primary/20 hover:shadow-sm active:scale-95 flex items-center justify-center">5分钟</button>
+        <button class="time-btn bg-neutral py-2 px-3 text-xs sm:text-sm rounded-lg border border-neutral/20 transition-all hover:bg-neutral/80 hover:shadow-sm active:scale-95 flex items-center justify-center">10分钟</button>
+        <button class="time-btn bg-neutral py-2 px-3 text-xs sm:text-sm rounded-lg border border-neutral/20 transition-all hover:bg-neutral/80 hover:shadow-sm active:scale-95 flex items-center justify-center">15分钟</button>
+        <button class="time-btn bg-neutral py-2 px-3 text-xs sm:text-sm rounded-lg border border-neutral/20 transition-all hover:bg-neutral/80 hover:shadow-sm active:scale-95 flex items-center justify-center">25分钟</button>
+      </div>
+    </div>
+    
+    <!-- 右侧：任务列表和控制按钮 -->
+    <div class="w-full sm:w-auto bg-white/80 bg-blur rounded-xl shadow-lg p-3 h-full min-h-[200px] flex flex-col">
+      
+      <div class="grid grid-cols-2 gap-2 flex-grow">
+        <!-- 任务项 -->
+        <div class="task-item flex items-center justify-center p-2.5 rounded-lg bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-all duration-300 transform hover:translate-x-1">
+          <div class="flex items-center gap-1.5">
+            <i class="fa fa-bath text-primary text-base"></i>
+            <span class="text-dark font-medium text-sm">洗澡</span>
+          </div>
+        </div>
+        
+        <div class="task-item flex items-center justify-center p-2.5 rounded-lg bg-neutral cursor-pointer hover:bg-gray-100 transition-all duration-300 transform hover:translate-x-1">
+          <div class="flex items-center gap-1.5">
+            <i class="fa fa-book text-dark/70 text-base"></i>
+            <span class="text-dark font-medium text-sm">作业</span>
+          </div>
+        </div>
+        
+        <div class="task-item flex items-center justify-center p-2.5 rounded-lg bg-neutral cursor-pointer hover:bg-gray-100 transition-all duration-300 transform hover:translate-x-1">
+          <div class="flex items-center gap-1.5">
+            <i class="fa fa-coffee text-dark/70 text-base"></i>
+            <span class="text-dark font-medium text-sm">休息</span>
+          </div>
+        </div>
+        
+        <div class="task-item flex items-center justify-center p-2.5 rounded-lg bg-neutral cursor-pointer hover:bg-gray-100 transition-all duration-300 transform hover:translate-x-1">
+          <div class="flex items-center gap-1.5">
+            <i class="fa fa-gamepad text-dark/70 text-base"></i>
+            <span class="text-dark font-medium text-sm">娱乐</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 底部卡通形象 -->
+  <div class="relative z-10 mt-0 -mb-8 px-4">
+    <div class="flex justify-between items-end">
+      <img id="wolf-image" src="wof1.png" alt="卡通狼" class="w-24 h-24 object-contain animate-float">
+      <img id="rabbit-image" src="RB1.png" alt="卡通兔子" class="w-20 h-20 object-contain animate-float" style="animation-delay: 1s;">
+    </div>
+  </div>
+
+  <script>
+    /**
+     * 进度环类 (ProgressRing)
+     * 负责渲染和更新进度环的显示
+     */
+    class ProgressRing {
+      constructor(ringElement) {
+        this.ringElement = ringElement;
+        this.radius = 45;
+        this.circumference = 2 * Math.PI * this.radius;
+        this.init();
+      }
+      
+      init() {
+        this.ringElement.style.strokeDasharray = `${this.circumference} ${this.circumference}`;
+        this.ringElement.style.transform = 'rotate(-90deg)';
+        this.ringElement.style.transformOrigin = '50% 50%';
+      }
+      
+      updateProgress(percent) {
+        percent = Math.max(0, Math.min(100, percent));
+        const offset = (100 - percent) / 100 * this.circumference;
+        this.ringElement.style.strokeDashoffset = offset;
+        this.ringElement.style.opacity = '1';
+      }
+    }
+    
+    /**
+     * 计时器类 (Timer)
+     * 处理计时逻辑
+     */
+    class Timer {
+      constructor() {
+        this.timer = null;
+        this.isRunning = false;
+        this.progress = 0;
+        this.duration = 25 * 60 * 1000; // 默认25分钟
+        this.remainingTime = this.duration;
+        this.progressCallback = null;
+        this.timeUpdateCallback = null;
+        this.timePercentage = 100; // 默认进度100%
+      }
+      
+      setDuration(milliseconds) {
+        this.duration = milliseconds;
+        this.remainingTime = milliseconds;
+        
+        const minutes = Math.floor(milliseconds / 60000);
+        const maxMinutes = 60;
+        this.timePercentage = (minutes / maxMinutes) * 100;
+        this.progress = 100;
+        
+        if (this.progressCallback) {
+          this.progressCallback(this.timePercentage);
+        }
+      }
+      
+      start(progressCallback) {
+        if (this.isRunning) return;
+        
+        if (progressCallback) {
+          this.progressCallback = progressCallback;
+        }
+        
+        this.isRunning = true;
+        const startTime = Date.now();
+        
+        this.timer = setInterval(() => {
+          const elapsedTime = Date.now() - startTime;
+          this.remainingTime = Math.max(0, this.duration - elapsedTime);
+          
+          this.progress = (this.remainingTime / this.duration) * 100;
+          this.displayProgress = this.timePercentage * (this.remainingTime / this.duration);
+          
+          const minutes = Math.floor(this.remainingTime / 60000);
+          const seconds = Math.floor((this.remainingTime % 60000) / 1000);
+          const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          
+          if (this.progressCallback) {
+            this.progressCallback(this.displayProgress);
+          }
+          
+          if (this.timeUpdateCallback) {
+            this.timeUpdateCallback(formattedTime);
+          }
+          
+          if (this.progress <= 0) {
+            this.progress = 0;
+            this.stop();
+          }
+        }, 100);
+      }
+      
+      pause() {
+        if (!this.isRunning) return;
+        clearInterval(this.timer);
+        this.isRunning = false;
+      }
+      
+      stop() {
+        clearInterval(this.timer);
+        this.isRunning = false;
+      }
+      
+      reset() {
+        this.stop();
+        this.progress = 100;
+        this.displayProgress = this.timePercentage;
+        this.remainingTime = this.duration;
+        
+        const minutes = Math.floor(this.duration / 60000);
+        const seconds = Math.floor((this.duration % 60000) / 1000);
+        const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (this.progressCallback) {
+          this.progressCallback(this.progress);
+        }
+        
+        if (this.timeUpdateCallback) {
+          this.timeUpdateCallback(formattedTime);
+        }
+      }
+    }
+    
+    /**
+     * 时间选择器类 (TimeSelector)
+     */
+    class TimeSelector {
+      constructor() {
+        this.timeButtons = document.querySelectorAll('.time-btn');
+        this.timeDisplay = document.getElementById('time-display');
+        this.selectedTime = '25分钟';
+        this.timeSelectedCallback = null;
+        this.initEvents();
+        this.initDefaultSelection();
+      }
+      
+      initEvents() {
+        this.timeButtons.forEach(button => {
+          button.addEventListener('click', () => this.selectTime(button));
+        });
+      }
+      
+      initDefaultSelection() {
+        let defaultButton = null;
+        this.timeButtons.forEach(button => {
+          if (button.textContent.trim() === this.selectedTime) {
+            defaultButton = button;
+          }
+        });
+        
+        if (defaultButton) {
+          this.selectTime(defaultButton);
+        }
+      }
+      
+      selectTime(timeButton) {
+        if (timeButton.disabled) {
+          return this.selectedTime;
+        }
+        
+        this.timeButtons.forEach(btn => {
+          btn.classList.remove('bg-primary/10', 'text-primary', 'border-primary/20');
+          btn.classList.add('bg-neutral', 'text-dark');
+        });
+        
+        timeButton.classList.remove('bg-neutral', 'text-dark');
+        timeButton.classList.add('bg-primary/10', 'text-primary', 'border-primary/20');
+        
+        this.selectedTime = timeButton.textContent;
+        
+        const minutes = parseInt(this.selectedTime.match(/\d+/)[0]);
+        if (this.timeSelectedCallback) {
+          this.timeSelectedCallback(minutes);
+        }
+        
+        return this.selectedTime;
+      }
+      
+      disableButtons() {
+        this.timeButtons.forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+        });
+      }
+      
+      enableButtons() {
+        this.timeButtons.forEach(btn => {
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        });
+      }
+    }
+    
+    /**
+     * 任务管理类 (TaskManager)
+     */
+    class TaskManager {
+      constructor() {
+        this.taskItems = document.querySelectorAll('.task-item');
+        this.currentTask = document.getElementById('current-task');
+        this.selectedTask = null;
+        this.initEvents();
+      }
+      
+      initEvents() {
+        this.taskItems.forEach(item => {
+          item.addEventListener('click', () => this.selectTask(item));
+        });
+      }
+      
+      selectTask(taskElement) {
+        this.taskItems.forEach(item => {
+          item.classList.remove('bg-primary/10', 'border-primary/20');
+          item.classList.add('bg-neutral');
+        });
+        
+        taskElement.classList.remove('bg-neutral');
+        taskElement.classList.add('bg-primary/10', 'border-primary/20');
+        
+        const task = taskElement.querySelector('span').textContent;
+        this.currentTask.textContent = task;
+        
+        this.selectedTask = { name: task };
+        return this.selectedTask;
+      }
+    }
+    
+    /**
+     * 时间管理器主类 (TimeManager)
+     */
+    class TimeManager {
+      constructor() {
+        this.progressRing = new ProgressRing(document.getElementById('progress-ring'));
+        this.timer = new Timer();
+        this.timeSelector = new TimeSelector();
+        this.taskManager = new TaskManager();
+        
+        this.wolfImage = document.getElementById('wolf-image');
+        this.rabbitImage = document.getElementById('rabbit-image');
+        this.startButton = document.getElementById('start-button');
+        this.resetButton = document.getElementById('reset-button');
+        this.timeDisplay = document.getElementById('time-display');
+        
+        this.init();
+      }
+      
+      init() {
+        // 绑定按钮事件
+        if (this.startButton) {
+          this.startButton.addEventListener('click', () => this.toggleTimer());
+        }
+        
+        if (this.resetButton) {
+          this.resetButton.addEventListener('click', () => this.resetTimer());
+        }
+        
+        // 设置计时器进度回调
+        this.timer.progressCallback = (progress) => {
+          this.progressRing.updateProgress(progress);
+          
+          // 狼图片移动逻辑
+          if (this.wolfImage && this.rabbitImage && this.timer.isRunning) {
+            const container = this.wolfImage.parentElement;
+            if (container) {
+              const maxDistance = container.clientWidth - this.wolfImage.clientWidth - this.rabbitImage.clientWidth;
+              const realProgress = this.timer.progress;
+              const moveDistance = (100 - realProgress) / 100 * maxDistance;
+              
+              this.wolfImage.style.animation = 'none';
+              this.wolfImage.style.transition = 'transform 0.1s linear';
+              this.wolfImage.style.transform = `translateX(${moveDistance}px)`;
+            }
+          }
+        };
+        
+        // 设置计时器时间更新回调
+        this.timer.timeUpdateCallback = (formattedTime) => {
+          this.timeDisplay.textContent = formattedTime;
+        };
+        
+        // 设置时间选择回调
+        this.timeSelector.timeSelectedCallback = (minutes) => {
+          if (this.wolfImage) {
+            this.wolfImage.style.transform = 'translateX(0)';
+            this.wolfImage.style.transition = 'none';
+          }
+          
+          this.timer.setDuration(minutes * 60 * 1000);
+          this.timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:00`;
+        };
+        
+        // 初始化时间显示
+        const defaultMinutes = Math.floor(this.timer.duration / 60000);
+        this.timeDisplay.textContent = `${defaultMinutes.toString().padStart(2, '0')}:00`;
+        
+        // 初始化进度环
+        const defaultPercentage = (defaultMinutes / 60) * 100;
+        this.progressRing.updateProgress(defaultPercentage);
+      }
+      
+      toggleTimer() {
+        const timeText = this.timeSelector.selectedTime;
+        const minutes = parseInt(timeText.match(/\d+/)[0]);
+        const duration = minutes * 60 * 1000;
+        
+        if (!this.timer.isRunning) {
+          this.timer.setDuration(duration);
+          this.timeSelector.disableButtons();
+          this.timer.start();
+          this.startButton.innerHTML = '<i class="fa fa-pause"></i> 暂停';
+          this.startButton.classList.remove('bg-primary');
+          this.startButton.classList.add('bg-amber-500');
+        } else {
+          this.timer.pause();
+          this.startButton.innerHTML = '<i class="fa fa-play"></i> 继续';
+          this.startButton.classList.remove('bg-amber-500');
+          this.startButton.classList.add('bg-primary');
+          this.timeSelector.enableButtons();
+        }
+      }
+      
+      resetTimer() {
+        this.timer.reset();
+        this.startButton.innerHTML = '<i class="fa fa-play"></i> 开始';
+        this.startButton.classList.remove('bg-amber-500');
+        this.startButton.classList.add('bg-primary');
+        this.timeSelector.enableButtons();
+        
+        if (this.wolfImage) {
+          this.wolfImage.style.transform = 'translateX(0)';
+          this.wolfImage.style.transition = 'none';
+        }
+        
+        const timeText = this.timeSelector.selectedTime;
+        const minutes = parseInt(timeText.match(/\d+/)[0]);
+        this.timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:00`;
+        
+        const percentage = (minutes / 60) * 100;
+        this.progressRing.updateProgress(percentage);
+      }
+    }
+    
+    /**
+     * 应用入口点
+     */
+    document.addEventListener('DOMContentLoaded', () => {
+      const timeManager = new TimeManager();
+    });
+  </script>
+</body>
+</html>
